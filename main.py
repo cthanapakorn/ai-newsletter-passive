@@ -35,7 +35,7 @@ def get_market_news(rss_url, limit=10):
 def generate_newsletter(stock_data, news_data, api_key):
     print("\n[ กำลังส่งข้อมูลให้ AI วิเคราะห์... อาจใช้เวลา 10-20 วินาที ]")
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
     
     raw_data = f"ข้อมูลหุ้นล่าสุด: {stock_data}\n\nพาดหัวข่าววันนี้:\n"
     for idx, news in enumerate(news_data, 1):
