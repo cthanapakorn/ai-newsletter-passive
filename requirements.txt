@@ -1,0 +1,5 @@
+yfinance
+feedparser
+pandas
+google-generativeai
+requests
