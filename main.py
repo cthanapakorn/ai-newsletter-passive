@@ -21,7 +21,6 @@ def get_stock_data(tickers):
                 last_price = "N/A"
                 
             info = stock.info
-            # ดึงค่าปันผลอย่างระมัดระวัง
             dy = info.get('dividendYield')
             if dy is not None:
                 div_yield = f"{dy * 100:.2f}%"
@@ -54,7 +53,7 @@ def generate_html_dashboard(stock_data, news_data, api_key):
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-2.5-flash')
     
-    # ดึงวันที่ปัจจุบันของเครื่อง
+    # ดึงวันที่ปัจจุบัน
     today_date = datetime.now().strftime("%d/%m/%Y")
     
     raw_data = f"วันที่ปัจจุบัน: {today_date}\nข้อมูลหุ้นล่าสุด: {stock_data}\n\nพาดหัวข่าววันนี้:\n"
@@ -84,24 +83,21 @@ def generate_html_dashboard(stock_data, news_data, api_key):
 # 4. ระบบควบคุมหลัก (รันและเปิดเว็บอัตโนมัติ)
 # ==========================================
 if __name__ == "__main__":
-    # ใส่ API Key ของคุณตรงนี้เพื่อทดสอบรันบนเครื่องตัวเอง (Local)
-    GEMINI_API_KEY = "ใส่_API_KEY_ของคุณที่นี่" 
+    # ใส่ API Key ของคุณเรียบร้อยแล้ว
+    GEMINI_API_KEY = "AIzaSyAkufv0PaTlyIUXUo3mFfIdOa-YLKrn6TY" 
     
-    if GEMINI_API_KEY == "ใส่_API_KEY_ของคุณที่นี่":
-        print("❌ Error: อย่าลืมเอา API Key มาใส่ในโค้ดก่อนรันบนเครื่องนะครับ")
-    else:
-        print("🚀 เริ่มดูดข้อมูลตลาด...")
-        stocks = get_stock_data(["AAPL", "MSFT", "NVDA", "TSLA"])
-        news = get_market_news("[https://feeds.finance.yahoo.com/rss/2.0/headline?s=AAPL,MSFT,NVDA,TSLA,QQQ](https://feeds.finance.yahoo.com/rss/2.0/headline?s=AAPL,MSFT,NVDA,TSLA,QQQ)")
+    print("🚀 เริ่มดูดข้อมูลตลาด...")
+    stocks = get_stock_data(["AAPL", "MSFT", "NVDA", "TSLA"])
+    news = get_market_news("[https://feeds.finance.yahoo.com/rss/2.0/headline?s=AAPL,MSFT,NVDA,TSLA,QQQ](https://feeds.finance.yahoo.com/rss/2.0/headline?s=AAPL,MSFT,NVDA,TSLA,QQQ)")
+    
+    html_content = generate_html_dashboard(stocks, news, GEMINI_API_KEY)
+    
+    # บันทึกเป็นไฟล์ index.html
+    file_path = os.path.abspath("index.html")
+    with open(file_path, "w", encoding="utf-8") as file:
+        file.write(html_content)
         
-        html_content = generate_html_dashboard(stocks, news, GEMINI_API_KEY)
-        
-        # บันทึกเป็นไฟล์ index.html
-        file_path = os.path.abspath("index.html")
-        with open(file_path, "w", encoding="utf-8") as file:
-            file.write(html_content)
-            
-        print("✅ สร้างไฟล์เสร็จแล้ว! กำลังเปิดหน้าเว็บให้คุณดู...")
-        
-        # สั่งเปิดหน้าเว็บผ่าน Browser ทันที
-        webbrowser.open(f"file://{file_path}")
+    print("✅ สร้างไฟล์เสร็จแล้ว! กำลังเปิดหน้าเว็บให้คุณดู...")
+    
+    # สั่งเปิดหน้าเว็บผ่าน Browser ทันที
+    webbrowser.open(f"file://{file_path}")
