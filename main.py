@@ -2,27 +2,32 @@ import os
 import yfinance as yf
 import feedparser
 import google.generativeai as genai
+from datetime import datetime
+import webbrowser
 
 # ==========================================
-# 1. ฟังก์ชันดึงข้อมูลหุ้น (อัปเกรด: ดึงย้อนหลัง 5 วันกันตลาดปิด)
+# 1. ฟังก์ชันดึงข้อมูลหุ้น (แก้บั๊กตัวเลขเพี้ยน)
 # ==========================================
 def get_stock_data(tickers):
     stock_data = []
     for ticker in tickers:
         try:
             stock = yf.Ticker(ticker)
-            # ดึงข้อมูลย้อนหลัง 5 วัน เพื่อหาค่าล่าสุดที่มีอยู่จริง
             hist = stock.history(period="5d")
             
             if not hist.empty:
-                # ใช้ราคาปิดของวันล่าสุดที่ตลาดเปิด
                 last_price = round(hist['Close'].iloc[-1], 2)
             else:
                 last_price = "N/A"
                 
             info = stock.info
-            div_yield = f"{info.get('dividendYield', 0) * 100:.2f}%" if info.get('dividendYield') else "N/A"
-            
+            # ดึงค่าปันผลอย่างระมัดระวัง
+            dy = info.get('dividendYield')
+            if dy is not None:
+                div_yield = f"{dy * 100:.2f}%"
+            else:
+                div_yield = "N/A"
+                
             stock_data.append({"Symbol": ticker, "Price": last_price, "Yield": div_yield})
         except Exception as e:
             print(f"Error fetching {ticker}: {e}")
@@ -31,7 +36,7 @@ def get_stock_data(tickers):
     return stock_data
 
 # ==========================================
-# 2. ฟังก์ชันกวาดข่าวการเงินและเทคโนโลยี
+# 2. ฟังก์ชันกวาดข่าว
 # ==========================================
 def get_market_news(rss_url, limit=10):
     try:
@@ -42,63 +47,61 @@ def get_market_news(rss_url, limit=10):
         return []
 
 # ==========================================
-# 3. ให้ AI สร้างหน้าเว็บ (Web Developer AI)
+# 3. ให้ AI สร้างหน้าเว็บ (บังคับข้อมูลเป๊ะๆ)
 # ==========================================
 def generate_html_dashboard(stock_data, news_data, api_key):
-    print("\n[ กำลังให้ AI เขียนโค้ดหน้าเว็บ... ]")
+    print("\n[ กำลังให้ AI จัดหน้าเว็บ... อาจใช้เวลา 15-20 วินาที ]")
     genai.configure(api_key=api_key)
-    
-    # ใช้โมเดลรุ่นใหม่ล่าสุด 2.5-flash
     model = genai.GenerativeModel('gemini-2.5-flash')
     
-    raw_data = f"ข้อมูลหุ้นล่าสุด: {stock_data}\n\nพาดหัวข่าววันนี้:\n"
+    # ดึงวันที่ปัจจุบันของเครื่อง
+    today_date = datetime.now().strftime("%d/%m/%Y")
+    
+    raw_data = f"วันที่ปัจจุบัน: {today_date}\nข้อมูลหุ้นล่าสุด: {stock_data}\n\nพาดหัวข่าววันนี้:\n"
     for idx, news in enumerate(news_data, 1):
         raw_data += f"{idx}. {news['Title']}\n"
         
     prompt = f"""
     {raw_data}
     ---
-    คำสั่ง: คุณคือนักพัฒนาเว็บไซต์และนักวิเคราะห์การลงทุน สร้างไฟล์ HTML5 แบบ Single Page สำหรับ 'AI Wealth Dashboard'
+    คำสั่ง: คุณคือนักพัฒนาเว็บไซต์ สร้างไฟล์ HTML5 แบบ Single Page สำหรับ 'AI Wealth Dashboard'
     
-    โครงสร้างและดีไซน์ (ต้องมี):
-    1. ใช้ CSS ในแท็ก <style> ให้ดูทันสมัย สะอาดตา โทนสีแบบ Financial Dashboard (เช่น โทนสีเข้ม) รองรับการดูบนมือถือ (Responsive)
-    2. Header: แสดงชื่อ "AI Wealth Newsletter" พร้อมวันที่อัปเดต
-    3. Section 1 (Market Overview): สร้างการ์ดหรือตารางแสดงราคาหุ้นและปันผลของ AAPL, MSFT, NVDA, TSLA
-    4. Section 2 (Executive Summary): สรุปภาพรวมตลาดและผลกระทบต่อหุ้นเทคโนโลยี จากข่าวที่ให้ไป (วิเคราะห์อย่างเป็นเหตุเป็นผล)
-    5. Section 3 (Disclaimer): คำเตือนการลงทุน
+    โครงสร้างและดีไซน์:
+    1. ใช้ CSS (<style>) ตกแต่งให้ดูเป็น Financial Dashboard ระดับโปร (เช่น พื้นหลังสีเข้ม ตัวหนังสือสีสว่าง)
+    2. Header: แสดงชื่อ "AI Wealth Newsletter" และระบุ 'วันที่อัปเดต' ตามข้อมูลที่ให้ไป
+    3. Section 1: ตารางหรือการ์ดแสดงราคาหุ้นและปันผลของ AAPL, MSFT, NVDA, TSLA
+    4. Section 2: บทสรุปผู้บริหาร สรุปข่าวและผลกระทบ
     
-    สำคัญมาก: ส่งกลับมาเฉพาะโค้ด HTML เริ่มต้นที่ <html> และจบที่ </html> ห้ามมีเครื่องหมาย Markdown ```html ครอบ
+    ⚠️ กฎเหล็กที่ห้ามฝ่าฝืน:
+    - ห้ามสร้างหรือแต่งตัวเลขราคาหุ้นและปันผลขึ้นมาเองเด็ดขาด! ให้ใช้ตัวเลขจาก 'ข้อมูลหุ้นล่าสุด' ที่ส่งให้เท่านั้น
+    - ห้ามใช้เครื่องหมาย Markdown ```html ครอบโค้ด ให้ตอบกลับมาเป็นโค้ด HTML ล้วนๆ เริ่มที่ <html>
     """
     
     response = model.generate_content(prompt)
-    
-    # ทำความสะอาดโค้ดเผื่อ AI เผลอใส่ Markdown มาให้
-    html_code = response.text.replace("```html", "").replace("```", "").strip()
-    return html_code
+    return response.text.replace("```html", "").replace("```", "").strip()
 
 # ==========================================
-# 4. ระบบควบคุมหลัก (Main Execution)
+# 4. ระบบควบคุมหลัก (รันและเปิดเว็บอัตโนมัติ)
 # ==========================================
 if __name__ == "__main__":
-    # ดึงกุญแจลับจากระบบ GitHub Secrets
-    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+    # ใส่ API Key ของคุณตรงนี้เพื่อทดสอบรันบนเครื่องตัวเอง (Local)
+    GEMINI_API_KEY = "ใส่_API_KEY_ของคุณที่นี่" 
     
-    if not GEMINI_API_KEY:
-        print("❌ Error: ไม่พบ GEMINI_API_KEY ในระบบ")
+    if GEMINI_API_KEY == "ใส่_API_KEY_ของคุณที่นี่":
+        print("❌ Error: อย่าลืมเอา API Key มาใส่ในโค้ดก่อนรันบนเครื่องนะครับ")
     else:
-        print("🚀 เริ่มระบบดึงข้อมูลตลาด...")
-        
-        # 1. กำหนดรายชื่อหุ้นเป้าหมาย
+        print("🚀 เริ่มดูดข้อมูลตลาด...")
         stocks = get_stock_data(["AAPL", "MSFT", "NVDA", "TSLA"])
-        
-        # 2. กำหนดแหล่งข่าว RSS
         news = get_market_news("[https://feeds.finance.yahoo.com/rss/2.0/headline?s=AAPL,MSFT,NVDA,TSLA,QQQ](https://feeds.finance.yahoo.com/rss/2.0/headline?s=AAPL,MSFT,NVDA,TSLA,QQQ)")
         
-        # 3. ให้ AI สร้างไฟล์หน้าเว็บ
         html_content = generate_html_dashboard(stocks, news, GEMINI_API_KEY)
         
-        # 4. บันทึกเป็นไฟล์ index.html เพื่อให้ GitHub Pages นำไปออนไลน์
-        with open("index.html", "w", encoding="utf-8") as file:
+        # บันทึกเป็นไฟล์ index.html
+        file_path = os.path.abspath("index.html")
+        with open(file_path, "w", encoding="utf-8") as file:
             file.write(html_content)
             
-        print("✅ สร้างไฟล์ index.html สำเร็จ พร้อมโชว์บนหน้าเว็บ!")
+        print("✅ สร้างไฟล์เสร็จแล้ว! กำลังเปิดหน้าเว็บให้คุณดู...")
+        
+        # สั่งเปิดหน้าเว็บผ่าน Browser ทันที
+        webbrowser.open(f"file://{file_path}")
