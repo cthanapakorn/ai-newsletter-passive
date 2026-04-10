@@ -1,28 +1,41 @@
-name: Daily AI Newsletter
+name: Generate and Deploy AI Dashboard
 
 on:
   schedule:
-    # รันทุกวันจันทร์-ศุกร์ เวลา 19:30 น. (เวลาไทย คือ 12:30 UTC)
     - cron: '30 12 * * 1-5'
-  workflow_dispatch: # ปุ่มกดรันเองเพื่อทดสอบ
+  workflow_dispatch:
+
+# ให้สิทธิ์ GitHub ในการอัปโหลดหน้าเว็บ
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.10'
 
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
+        run: pip install yfinance feedparser google-generativeai
 
-      - name: Run Script
+      - name: Generate HTML Dashboard
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python main.py
+
+      - name: Upload artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.' 
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
